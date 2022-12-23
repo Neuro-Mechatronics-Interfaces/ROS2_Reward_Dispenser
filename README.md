@@ -6,7 +6,7 @@ A ROS2 node that communicates with a microcontroller running the 'Serial-Relay' 
 - [ROS2 Galactic](https://docs.ros.org/en/galactic/Installation/Windows-Install-Binary.html)
 - Python 3.8 with package dependencies: serial, bluetooth, asyncio which can be install by [pip](https://pip.pypa.io/en/stable/).
 ```
-pip install serial bluetooth asyncio
+pip install pyserial bluetooth asyncio
 ```
 Clone the repository in your ros workspace, build with colcon, finally source
 ``` 
