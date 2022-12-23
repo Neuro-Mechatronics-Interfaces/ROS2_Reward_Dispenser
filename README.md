@@ -20,7 +20,8 @@ colcon build --packages-select reward_dispenser
 Use the [Arduino IDE](https://www.arduino.cc/en/software) to flash the accompanied `serial_relay.ino` script onto the microcontroller. Note the COM port assigned to it for the config file.
 
 ## Quick Start ##
-1. Open the `config.yaml` file and fill in the `COM` port value to match the locally assigned microcontroller port. Leave `Baudrate` alone if it wasn't changed in the script.
+1. Open the `reward_serial_node_2` script and change the default port to match the locally assigned port. 
+   + In the future, there will be a `config.yaml` file and fill in the `COM` port value to match the locally assigned microcontroller port. Leave `Baudrate` alone if it wasn't changed in the script.
 
 2. Run the reward dispenser node 
 ```
