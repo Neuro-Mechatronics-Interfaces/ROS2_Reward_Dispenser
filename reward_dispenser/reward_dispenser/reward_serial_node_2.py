@@ -9,13 +9,34 @@ import serial
 DEFAULT_QOS = rclpy.qos.QoSPresetProfiles.SYSTEM_DEFAULT.value
 
 class RewardNode(rclpy.node.Node):
-    """
-    Node that connects to the arduino bluetooth dispenser and sends reward dispense commands.
-
-    ex: "d1000x1" sent to the NML-NHP Reward device will dispense water for 1000ms
-    """
-    def __init__(self, *args, node_name='reward', dev_name='Arduino Reward Pump', dev_port='COM6', verbose=True, **kwargs):
-        super().__init__(*args, node_name=node_name, **kwargs)
+    def __init__(self, *args, node_name='reward', 
+                              dev_name='Arduino Reward Pump', 
+                              dev_port='COM6', 
+                              verbose=True,
+                              **kwargs
+                ):
+        """
+        This object creates a serial connection with an arduino and sends it reward dispense commands while listening to the ROS2 topic '/task/center_out/state'. 
+        Reward conditions are based on the task states; as an example if the task state reads 'hold_a' then a dispense command gets sent with the
+        amount and number of repetitions.
+        
+        The microcontroller will also listen to a digital input from a button press which will also enable the dispense relay
+    
+        Parameters:
+        -----------
+        node_name : str
+            Unique name associated for the ROS2 node
+        dev_name : str
+            Connected Device assigned name
+        dev_port : str
+            Locally assigned COM port to connect to (Must be changed to match PC)
+        verbose : bool
+            Enable/disable verbose output for terminal debugging
+    
+        Notes:
+            Example: "d1000x1" sent to the NML-NHP Reward device will dispense water for 1000ms
+            
+        """        super().__init__(*args, node_name=node_name, **kwargs)
         self.serial_connected = False
         self.dev_name = dev_name
         self.dev_port = dev_port
@@ -32,9 +53,10 @@ class RewardNode(rclpy.node.Node):
         self.init_client()
 
     def initialize_parameters(self):
-        # Define all time-based dispensing amounts for reward based on task conditions
-        # This may change to volume amounts
-
+        """
+        Define all time-based dispensing amounts for reward based on task conditions
+        This may change to volume amounts
+        """
         self.declare_parameter('/dispense_hold_time/target_a', 0.10)
         self.declare_parameter('/dispense_hold_time/target_b', 0.20)
         self.declare_parameter('/dispense_hold_time/target_c', 0.20)
@@ -46,24 +68,34 @@ class RewardNode(rclpy.node.Node):
         self.declare_parameter('/repeat/target_c', 1)
 
     def initialize_subscribers(self):
-        # Just need subscription for 'task/center_out/state' topic
+        """ Just need subscription for 'task/center_out/state' topic
+        """
         self.task_state_sub = self.create_subscription(event_message,
                                                        '/task/center_out/state',
                                                        self.state_changed,
                                                        DEFAULT_QOS)
                                                        
     def initialize_publishers(self):
-        # chatter topic for debug
+        """ chatter topic for debug
+        """
         self.chatter_pub = self.create_publisher(event_message, '/chatter', 1)
 
     def disconnect(self):
-        # Close socket connection to device      
+        """ Close socket connection to device  
+        """
         try:
             self.sock.close()
             print("Device disconnected")
         finally: pass
 
     def state_changed(self, msg):
+        """ Callback function that gets executed whenever the state topic has new data published to it
+        
+        Parameters:
+        -----------
+        msg : String
+            ROS2 event_message data type (String) with the new data
+        """
         if self.verbose: print("State changed!")
         cmd = str(msg.data)
         if self.verbose: print("received data: {}".format(cmd))
@@ -73,11 +105,18 @@ class RewardNode(rclpy.node.Node):
         self.dispensed = False
 
     def logger(self, msg_str):
+        """ Function to publish a message to the '/chatter' topic
+        """
         msg = event_message()
         msg.data = msg_str
         self.chatter_pub.publish(msg)
     
     def timer_callback(self):
+        """ The callback function which executes whenever the timer timeout is reached (10Hz)
+        The state saved to the 'current_state' attribute is evaluated and passed to a case structure
+        
+        
+        """
         #dur_dispense = False        
         cmd = self.current_state
 
@@ -133,6 +172,16 @@ class RewardNode(rclpy.node.Node):
             pass
 
     def duration_dispense(self, dur, rep):
+        """ Function that creates and handles dispense messages with the duration and number of repetitions
+        
+        Parameters:
+        -----------
+        dur : int
+            The length in milliseconds to enable the relay dispense
+        rep : int
+            The number of repetitions for the dispense time to repeat        
+        
+        """
         self.dispensed = True
         if dur!=0 or rep!=0:
             disp_msg = "d{}x{}\n".format(str(dur), str(rep))
@@ -140,15 +189,24 @@ class RewardNode(rclpy.node.Node):
             self.send(disp_msg)    
         
     def cont_dispense(self, enable = False):
-        # Send command to relay to turn on/off
+        """ Send command to relay to turn on/off
+        """
         if enable:            
             self.send("c\n")# Start relay ("continuous")
         else:            
             self.send("q\n") # Stop relay ("quit")
 
     def send(self, msg, encode_type='utf-8'):
-        # Send a string message to the connected serial device and encode it 
-        # into default utf-8 format
+        """ Send a string message to the connected serial device and encode it 
+        into default utf-8 format
+        
+        Parameters:
+        -----------
+        msg : str
+            Message to send to the microcontroller
+        encode_type : str
+            Encoding type to convert message into bytes, usually 'utf-8'
+        """
         if self.sock:
             self.sock.write(bytes(msg, encode_type))
         else:
@@ -156,7 +214,9 @@ class RewardNode(rclpy.node.Node):
     
 
     def init_client(self):
-        # Device should already be connected, but we will flush the incoming bytes
+        """Helper function for device connection.
+        The device should already be connected, but we will flush the incoming bytes
+        """
         #print(self.sock.readline())    
         print("{} set up".format(self.dev_name))
         self.send("q\nq\nq\n")
