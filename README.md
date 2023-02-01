@@ -17,7 +17,7 @@ colcon build --packages-select reward_dispenser
 + For Windows 10 source using `call install/local_setup.bat`
 + For UBuntu use `source install/setup.bash`
 
-Use the [Arduino IDE](https://www.arduino.cc/en/software) to flash the accompanied `serial_relay.ino` script onto the microcontroller. Note the COM port assigned to it for the config file.
+Use the [Arduino IDE](https://www.arduino.cc/en/software) to flash the accompanied `serial_relay_scale_LEMatrix.ino` script onto the microcontroller. Note the COM port assigned to it for the config file.
 
 ## Quick Start ##
 1. Open the `reward_serial_node_2` script and change the default port to match the locally assigned port. 
