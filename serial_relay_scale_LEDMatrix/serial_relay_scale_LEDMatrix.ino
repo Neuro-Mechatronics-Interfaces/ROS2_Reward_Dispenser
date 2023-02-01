@@ -61,26 +61,33 @@ const uint8_t PROGMEM pacman1[F_PMAN1 * W_PMAN1] =  // gobbling pacman animation
   0x00, 0x42, 0xe7, 0xe7, 0xff, 0xff, 0x7e, 0x3c,
 };
 
+
 uint8_t scrollSpeed = 25;    // default frame delay value
 textEffect_t scrollEffect = PA_SCROLL_LEFT; // or PA_SPRITE
 textPosition_t scrollAlign = PA_CENTER; //PA_LEFT, PA_CENTER, PA_RIGHT
 uint16_t scrollPause = 2000; // in milliseconds
 
 
-// ==============HX711 and Loac Cell Variables ===========================
+// ==============HX711 and Load Cell Variables ===========================
 unsigned long delaytime=100;
-float y1 = 0.15; // calibrated mass to be added
 long x1 = 0L;
 long x0 = 0L;
-float avg_size = 3.0; // amount of averages for each mass measurement
+float offset = 0;
 float mass; // in Kg
 int volume; // in mL
-float offset = 0;
+
+
+// ================= Adjustable Parameters =====================
+bool VERBOSE = false;
+bool idle=false;
+//int ONG_KG_CALIBRATED = 7956700; // Set VERBOSE output to "true", value after placing a 1Kg weight (or water container with 1L) on the scale and reading the raw output from the HX711 sensor
+//int ZERO_CALIBRATED = 8672900; // Set these values by enabling VERBOSE output to "true", with an empty water container on the scale, and reading the raw output from the HX711 sensor
+int ZERO_VALUE = 8739450; // May never need this, but it's the value from the sensor with nothing on the scale
+float avg_size = 3.0; // amount of averages for each mass measurement (more measurements take longer)
+float y1 = 1.00; // calibrated mass to be added (ex: 1 = 1kg adjust to your system)
 
 
 // ============= Global state-tracking variables =========================
-bool VERBOSE = false;
-bool idle=false;
 volatile bool do_dispense;
 unsigned long previousMillis = 0;        // will store last time relay was enabled
 unsigned long currentMillis = 0;
@@ -216,14 +223,12 @@ void setupPins(void)
   digitalWrite(CONNECT_LED_PIN_OUT, LOW);
   digitalWrite(REWARD_LED_PIN_OUT, LOW);
   attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_IN), _handle_manual_dispense, CHANGE);
-  //attachInterrupt(digitalPinToInterrupt(HX711_BUTTON_PIN_IN), _handle_manual_dispense2, CHANGE);
-//attachInterrupt(digitalPinToInterrupt(HX711_RESET_PIN), _reset_load, CHANGE);
 }
 
 void setupLEDMatrix(void)
 {
     lc.begin();
-    lc.setIntensity(2); // Set the brightness to a medium values ( [0-15] == [low-high] )
+    lc.setIntensity(0); // Set the brightness to a medium values ( [0-15] == [low-high] )
     lc.print("Ready!");
     delay(500);
     lc.displayReset(); // and clear the display
@@ -232,8 +237,8 @@ void setupLEDMatrix(void)
 void setupLoadCell(void)
 {
   // calibrateLoadCell()
-  x0 = 8584600; // zero point
-  x1 = 8739450;
+  x0 = 7956700; //ONG_KG_CALIBRATED;  // value for a 1kG weight on the scale (7956700) // global parameters are causing an issue with reading...
+  x1 = 8672900; //ZERO_CALIBRATED;  // value for nothing on the scale (8672900)
 
 }
 
@@ -374,10 +379,6 @@ void _reset_load(void)
   //Serial.println("reset button pressed");
   // reset button pressed and new zero found
   offset = -mass;
-  //x0 = hx711.read();
-  //digitalWrite(REWARD_LED_PIN_OUT, HIGH);
-  //delay(250);
-  //digitalWrite(REWARD_LED_PIN_OUT, LOW);
 }
 
 void _handle_duration_request(double x) 
