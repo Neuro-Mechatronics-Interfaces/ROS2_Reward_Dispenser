@@ -17,7 +17,7 @@ colcon build --packages-select reward_dispenser
 + For Windows 10 source using `call install/local_setup.bat`
 + For UBuntu use `source install/setup.bash`
 
-Use the [Arduino IDE](https://www.arduino.cc/en/software) to flash the accompanied `serial_relay_scale_LEMatrix.ino` script onto the microcontroller. You may need 3 additional libraries to run the sketch with the weight sensing and LED matrix display: `MD_Parola`, `MD_MAX72XX`, and `HX711`. These libraries can be installed using the built-in Library Manager. 
+Use the [Arduino IDE](https://www.arduino.cc/en/software) to flash the accompanied `serial_relay_scale_LEMatrix.ino` script onto the microcontroller. You may need 3 additional libraries to run the sketch with the weight sensing and LED matrix display: `MD_Parola`, `MD_MAX72XX`, and `Queuetue HX711 Library`. These libraries can be installed using the built-in Library Manager. 
 
 If using the ROS2 node, note the COM port assigned to it for the config file.
 
