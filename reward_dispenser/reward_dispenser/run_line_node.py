@@ -3,60 +3,84 @@ from rclpy.node import Node
 import time
 import serial
 
-dispense_time = 65
 
 class Node(Node):
-    """
-    Node that connects to the arduino via serial and fills/empties the reward line with water.
-
-    ex: "d:30000x1" sent to the NML-NHP Reward device will dispense water for 30s
-    """
-    def __init__(self, *args, node_name='line_run', dev_name='Arduino Reward Pump',  dev_port='COM6', verbose=False, **kwargs):
+    def __init__(self, *args, 
+                    node_name='line_run', 
+                    dev_name='Arduino Reward Pump',  
+                    dev_port='COM6', 
+                    baudrate=115200, 
+                    dispense_time=60,
+                    verbose=False, 
+                    **kwargs):
+        """
+        This is the object that the single-run dispenser behavior, and connects to 
+        the arduino via serial and fills/empties the reward line with
+        
+        Parameters:
+        -----------
+        node_name : str
+            Specific name for ROS2 Node
+        rate : int
+            Publishing rate for running update commands
+        dev_name: str 
+            Custom device name for the cnnected device  
+        dev_port : str 
+            COM port to connect to (ex: 'COM6') 
+        baudrate : int
+            Communication baudrate for connected device 
+        dispense_time : int
+            Duration in seconds to dispense water
+        verbose : bool
+            Enable/disable verbose output for debugging on the terminal 
+        
+        """                 
         super().__init__(*args, node_name=node_name, **kwargs)
-        self.serial_connected = False
-        self.verbose = verbose
         self.dev_name = dev_name
+        self.verbose = verbose
         self.flush_not_done = True
         self.create_timer(0.1, self.timer_callback)
+        self.declare_parameter('dispense_time',40)
         self.tick = time.time()
-        self.timer_ct = 0
-        self.sock = serial.Serial(port=dev_port, baudrate=115200, timeout=0.1)
-        self.init_client()
+        self.sock = self.init_client(dev_port, baudrate, False)
 
+        param = self.get_parameter('dispense_time').value
+        self.cont_dispense(True)
+        print("Dispensing water for {} seconds".format(param))
+        
     def timer_callback(self):
-        # Check whether dispense suration has passed
-        tock = time.time()
-        if (tock - self.tick) > dispense_time:
+        """ Callback function that executes from the timer, checks whether dispense suration has passed
+        """
+        dispense_time = self.get_parameter('dispense_time').value
+        if (time.time() - self.tick) > dispense_time and self.sock:
             print("Dispense done")
-            self.flush_not_done = False
+            time.sleep(0.1)
             self.cont_dispense(False)
+            self.flush_not_done = False
         else:
             self.cont_dispense(True)
-            self.timer_ct += 0.1
-            #print(self.timer_ct)
-            #print(self.timer_ct % 1)
-            #if self.timer_ct % 1 == 0:
-            #    print("timer callback")
-            #    #self.cont_dispense(True)
-    
-        
+
+
     def disconnect(self):
-        # Close socket connection to device      
+        """ Close socket connection to device      
+        """
         try:
             self.sock.close()
             print("Device disconnected")
         finally: pass
         
     def cont_dispense(self, enable = False):
-        # Send command to relay to turn on/off
+        """ Send command to relay to turn on/off
+            ex: "d:30000x1" sent to the NML-NHP Reward device will dispense water for 30s
+         """
         if enable:
             self.send("c\n")# Start relay ("continuous")
         else:            
-            self.send("q\n") # Stop relay ("quit")
+            self.send("q\nq\n") # Stop relay ("quit")
 
     def send(self, msg, encode_type='utf-8'):
-        # Send a string message to the connected serial device and encode it 
-        # into default utf-8 format
+        """ Send a string message to the connected serial device and encode it into default utf-8 format
+        """
         if self.sock:
             if self.verbose: print("Sending: {}".format(msg))
             self.sock.write(bytes(msg, encode_type))
@@ -64,12 +88,18 @@ class Node(Node):
             print("Error sending '{}' to device".format(msg))
     
 
-    def init_client(self):
-        # Device should already be connected, but we will flush the incoming bytes
-        #print(self.sock.readline())
-        self.cont_dispense(True)
-        print("{} set up".format(self.dev_name))
-        print("Dispensing water for {} seconds".format(dispense_time))
+    def init_client(self, port, baudrate, flush):
+        """ Attempt to connect to device with port and baudrate, option to flush incoming bytes
+        """
+        sock = None
+        try:
+            sock = serial.Serial(port=port, baudrate=baudrate, timeout=0.1)
+            print(self.sock.readline()) if flush else flush # empty the socket of any bytes if requested
+            print("{} set up".format(self.dev_name))
+        except:
+            print("Error with connecting to port {}".format(port))
+        
+        return sock
         
 
 def main(args=None):
@@ -80,7 +110,7 @@ def main(args=None):
             rclpy.spin_once(node)
             
     except KeyboardInterrupt:
-        print("Keyboard interupt. Stopping dispense")
+        print("Keyboard Interrupt - Stopping dispense")
     finally:
         node.disconnect()
         node.destroy_node()
