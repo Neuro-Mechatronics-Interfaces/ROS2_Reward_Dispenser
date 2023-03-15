@@ -1,0 +1,16 @@
+/reward:
+  ros__parameters:
+    use_sim_time: false
+    test_param: true
+    dispense_hold_time:
+      target_a: 0.10
+      target_b: 0.20
+      target_c: 0.20
+    dispense_duration:
+      target_a: 0.00
+      target_b: 300.00
+      target_c: 400.00
+    repeat:
+      target_a: 1.0
+      target_b: 1.0
+      target_c: 1.0
