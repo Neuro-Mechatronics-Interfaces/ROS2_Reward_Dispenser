@@ -19,6 +19,13 @@ colcon build --packages-select reward_dispenser
 
 Use the [Arduino IDE](https://www.arduino.cc/en/software) to flash the accompanied `serial_relay_scale_LEMatrix.ino` script onto the microcontroller. You may need 3 additional libraries to run the sketch with the weight sensing and LED matrix display: `MD_Parola`, `MD_MAX72XX`, and `Queuetue HX711 Library`. These libraries can be installed using the built-in Library Manager. 
 
+Device permissions may also need to be set up if interfacing with a USB device for the first time. Add the user to the `dialout` and `tty` groups:
+```
+sudo usermod -a -G dialout your-username
+sudo usermod -a -G tty your-username
+sudo chmod a+rw /dev/ttyACM*
+```
+
 If using the ROS2 node, note the COM port assigned to it for the config file.
 
 ## Quick Start ##

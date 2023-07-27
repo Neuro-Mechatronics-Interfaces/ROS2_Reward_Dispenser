@@ -21,7 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
 #            'reward = reward_dispenser.reward_bluetooth_node:main',
-            'reward = reward_dispenser.reward_serial_node_2:main',
+            'node = reward_dispenser.serial_node:main',
             'run_line = reward_dispenser.run_line_node:main',
         ],
     },

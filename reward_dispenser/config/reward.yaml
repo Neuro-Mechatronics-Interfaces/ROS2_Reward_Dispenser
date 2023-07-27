@@ -1,5 +1,7 @@
 /reward:
   ros__parameters:
+    state_topic: '/task/center_out/state'
+    port: 'ttyACM0'
     use_sim_time: false
     test_param: true
     dispense_hold_time:
