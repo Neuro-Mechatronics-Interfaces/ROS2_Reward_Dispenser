@@ -21,7 +21,7 @@ from launch.actions import ExecuteProcess
 def generate_launch_description():
     
     # Set the ROS2 domain space
-    ros_domain = ExecuteProcess( cmd=["set ROS_DOMAIN_ID=42"], shell=True, output="screen" )
+    #ros_domain = ExecuteProcess( cmd=["set ROS_DOMAIN_ID=42"], shell=True, output="screen" )
 
 
     # Reward dispenser node

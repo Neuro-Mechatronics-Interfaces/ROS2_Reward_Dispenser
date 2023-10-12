@@ -56,6 +56,7 @@ class RewardNode(Node):
         self.sock = None
         self.current_state = None
         self.last_state = None
+        self.new_state_flag = False
         self.dispensed = False
         self.state_change_t = time.perf_counter()
         self.create_timer(1/self.state_cb_rate, self.timer_callback)
@@ -93,6 +94,7 @@ class RewardNode(Node):
                 ('velocity_monitor.enable', False),
                 ('velocity_monitor.threshold', 0.03),
                 ('velocity_monitor.dispense_time', 300),
+                ('enable_chatter', True),
             ])
 
     def initialize_subscribers(self):
@@ -132,7 +134,12 @@ class RewardNode(Node):
                         success = True
                         self.dev_baud = param.value
                         self.connect()
+            if param.name == "enable_chatter":
+                if para.type_ == Parameter.Type.BOOL:
+                    success = True
+                    self.verbose = param.value
         return SetParametersResult(successful=success)
+        
     
     def disconnect(self):
         """ Safely close socket connection to device  
@@ -172,8 +179,10 @@ class RewardNode(Node):
         if self.verbose: print("received data: {}".format(cmd))
         self.last_state = self.current_state
         self.current_state = cmd
+        #print(self.current_state)
         self.state_change_t = time.perf_counter()
         self.dispensed = False
+        self.new_state_flag = True
 
     def logger(self, msg_str):
         """ Function to publish a message to the '/chatter' topic
@@ -187,12 +196,13 @@ class RewardNode(Node):
         The state saved to the 'current_state' attribute is evaluated within a case structure
                 
         """
-        #dur_dispense = False        
-        cmd = self.current_state
-        if cmd is None:
+        #dur_dispense = False     
+        #print(self.current_state)   
+        cmd = str(self.current_state)
+        if not cmd or cmd=='':
             return
             
-        if self.verbose:
+        if self.verbose and self.new_state_flag:
             self.logger("entered ".format(cmd)) 
 
         if cmd == "intertrial":
@@ -205,13 +215,17 @@ class RewardNode(Node):
         #    pass
 
         # Reinforcing the reward when the cursor is in a target
-        if cmd[:4] == "hold":
+        if cmd[:4] == "hold":            
             target_letter = cmd[-1]
-            hold_time = self.get_parameter('state_monitor.target_{}.hold_time'.format(target_letter)).value
-            if (time.perf_counter() - self.state_change_t) >= hold_time and not self.dispensed: 
+            hold_time = self.get_parameter('state_monitor.target_{}.hold_time'.format(target_letter)).value/1000
+            #print("Time elapsed: {}".format((time.perf_counter() - self.state_change_t)))
+            if (time.perf_counter() - self.state_change_t) >= hold_time and not self.dispensed:
                 self.dispensed = True
                 dur = self.get_parameter('state_monitor.target_{}.dispense_time'.format(target_letter)).value
                 rep = self.get_parameter('state_monitor.target_{}.repeat'.format(target_letter)).value
+                if self.verbose and self.new_state_flag: 
+                    self.logger('dispenser triggered for state {}, dispensing {} with repeat of {}'.format(cmd, dur, rep))
+                print('dispensing!')
                 self.duration_dispense(dur, rep)
 
         if cmd[:4] == "move":
@@ -258,6 +272,8 @@ class RewardNode(Node):
             # Turn off the continuous dispense at this point and provide a 
             # duration reward
             pass
+            
+        self.new_state_flag = False
         
 
     def duration_dispense(self, dur, rep):

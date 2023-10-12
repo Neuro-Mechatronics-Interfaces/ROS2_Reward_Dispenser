@@ -41,8 +41,14 @@ class Node(Node):
         self.flush_not_done = True
         self.create_timer(0.1, self.timer_callback)
         self.declare_parameter('dispense_time',40)
+        self.declare_parameter('device.port', dev_port),
+        self.declare_parameter('device.baudrate', baudrate),
         self.tick = time.time()
-        self.sock = self.init_client(dev_port, baudrate, False)
+
+        port = self.get_parameter('device.port').value
+        baud = self.get_parameter('device.baudrate').value
+
+        self.sock = self.init_client(port, baud, False)
 
         param = self.get_parameter('dispense_time').value
         self.cont_dispense(True)
@@ -95,7 +101,7 @@ class Node(Node):
         try:
             sock = serial.Serial(port=port, baudrate=baudrate, timeout=0.1)
             print(self.sock.readline()) if flush else flush # empty the socket of any bytes if requested
-            print("{} set up".format(self.dev_name))
+            print("{} successfully connected to {}, baudrate={}".format(self.dev_name, port, baudrate))
         except:
             print("Error with connecting to port {}".format(port))
         

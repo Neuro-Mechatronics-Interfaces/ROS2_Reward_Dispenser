@@ -1,6 +1,6 @@
 /reward:
   ros__parameters:
-    state_topic: '/task/center_out/state'
+    state_topic: '/machine/state'
     port: 'ttyACM0'
     use_sim_time: false
     test_param: true
@@ -10,8 +10,8 @@
       target_c: 0.20
     dispense_duration:
       target_a: 0.00
-      target_b: 300.00
-      target_c: 400.00
+      target_b: 600.00
+      target_c: 700.00
     repeat:
       target_a: 1.0
       target_b: 1.0
