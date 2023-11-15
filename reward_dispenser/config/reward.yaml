@@ -1,18 +1,28 @@
+# Add monitors for the reward node to handle dispensing conditions below
 /reward:
   ros__parameters:
     state_topic: '/machine/state'
-    port: 'ttyACM0'
+    device:
+      port: '/dev/ttyACM0'
+      baudrate: 115200
     use_sim_time: false
     test_param: true
-    dispense_hold_time:
-      target_a: 0.10
-      target_b: 0.20
-      target_c: 0.20
-    dispense_duration:
-      target_a: 0.00
-      target_b: 600.00
-      target_c: 700.00
-    repeat:
-      target_a: 1.0
-      target_b: 1.0
-      target_c: 1.0
+    state_monitor:
+      enable: true
+      target_a:
+        hold_time: 1    
+        dispense_time: 0
+        repeat: 1
+      target_b:
+        hold_time: 200
+        dispense_time:  500
+        repeat: 1
+      target_c:
+        hold_time: 200
+        dispense_time: 700
+        repeat: 1
+    velocity_monitor:
+      enable: false
+      threshold: 0.5
+      dispense_time: 700
+

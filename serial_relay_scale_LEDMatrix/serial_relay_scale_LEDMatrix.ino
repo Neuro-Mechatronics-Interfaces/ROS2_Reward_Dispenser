@@ -114,6 +114,8 @@ void setup(void)
   n_repeat = 1;
   do_dispense = false;
   
+  _reset_load(); // Set the current load to zero, avoids having to press the reset button every time the task starts
+
 }
 
 void loop(void)

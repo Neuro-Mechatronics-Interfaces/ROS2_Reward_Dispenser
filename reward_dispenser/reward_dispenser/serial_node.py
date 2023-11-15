@@ -3,11 +3,12 @@ import math
 import numpy
 import rclpy
 import serial
+import keyboard
 from rclpy.node import Node
 from rclpy import qos
 from rclpy.parameter import Parameter
 from rcl_interfaces.msg import SetParametersResult
-from example_interfaces.msg import String as event_message
+from example_interfaces.msg import String as event_message, Bool
 from geometry_msgs.msg import Point, Vector3
 
 DEFAULT_QOS = qos.QoSPresetProfiles.SYSTEM_DEFAULT.value
@@ -15,7 +16,7 @@ DEFAULT_QOS = qos.QoSPresetProfiles.SYSTEM_DEFAULT.value
 class RewardNode(Node):
     def __init__(self, *args, node_name='reward', 
                               dev_name='Arduino Reward Pump', 
-                              dev_port='COM6', 
+                              dev_port='/dev/ttyACM0', 
                               dev_baud=115200,
                               verbose=False,
                               **kwargs,
@@ -88,12 +89,13 @@ class RewardNode(Node):
                 ('state_monitor.target_c.dispense_time', 200),
                 ('state_monitor.target_c.repeat', 1),
                 ('state_monitor.enable', True),
-                ('device.port', self.dev_port),
-                ('device.baudrate', self.dev_baud),
+                ('port', self.dev_port),
+                ('baudrate', self.dev_baud),
                 ('state_topic', '/task/center_out/state'),
                 ('velocity_monitor.enable', False),
                 ('velocity_monitor.threshold', 0.03),
                 ('velocity_monitor.dispense_time', 300),
+                ('manual_dispense.dispense_time', 200),
                 ('enable_chatter', True),
             ])
 
@@ -105,14 +107,12 @@ class RewardNode(Node):
                                                        self.get_parameter('state_topic').value,
                                                        self.state_change_cb,
                                                        DEFAULT_QOS)
-        self.vel_sub = self.create_subscription(Vector3,
-                                                'robot/feedback/velocity',
-                                                self.velocity_cb,
-                                                DEFAULT_QOS)
-        self.pos_sub = self.create_subscription(Point,
-                                                'robot/feedback/position',
-                                                self.position_cb,
-                                                DEFAULT_QOS)
+        self.vel_sub = self.create_subscription(Vector3, 'robot/feedback/velocity', self.velocity_cb, DEFAULT_QOS)
+        
+        self.pos_sub = self.create_subscription(Point, 'robot/feedback/position', self.position_cb, DEFAULT_QOS)
+        
+        self.dispense_sub = self.create_subscription(Bool, 'manual_dispense', self.manual_dispense_cb, DEFAULT_QOS)
+        
                                                                                                       
     def initialize_publishers(self):
         """ chatter topic for debug
@@ -123,12 +123,12 @@ class RewardNode(Node):
     def parameters_callback(self, params):
         success = False
         for param in params:
-            if param.name == "device.port":
+            if param.name == "port":
                 if param.type_ == Parameter.Type.STRING:                    
                     success = True
                     self.dev_port = param.value
                     self.connect()
-            if param.name == "device.baud":
+            if param.name == "baud":
                 if param.type_ in [Parameter.Type.DOUBLE, Parameter.Type.INTEGER]:
                     if param.value >= 0.0 and param.value < 10000000.0:
                         success = True
@@ -152,6 +152,20 @@ class RewardNode(Node):
         """
         """
         pass
+        
+    def manual_dispense_cb(self, msg):
+        """ Callback function that runs when a manual dispense request from the ROS2 network occurs.
+        
+        Parameters:
+        -----------
+        msg : Bool
+            ROS2 event_message data type (Bool) with the new data
+        """
+        #if msg.data == True:
+        self.logger('Manual dispensed command received')
+        dur = self.get_parameter('velocity_monitor.enable').value
+        self.duration_dispense(200, 1)
+        
 
     def velocity_cb(self, msg):
         """ Dispense if the velocity of the robot crosses a threadholf speed value, otherwise turn off
@@ -179,7 +193,6 @@ class RewardNode(Node):
         if self.verbose: print("received data: {}".format(cmd))
         self.last_state = self.current_state
         self.current_state = cmd
-        #print(self.current_state)
         self.state_change_t = time.perf_counter()
         self.dispensed = False
         self.new_state_flag = True
@@ -196,6 +209,9 @@ class RewardNode(Node):
         The state saved to the 'current_state' attribute is evaluated within a case structure
                 
         """
+        if keyboard.is_pressed("space"):
+            self.manual_dispense_cb(True)
+        
         #dur_dispense = False     
         #print(self.current_state)   
         cmd = str(self.current_state)
@@ -323,15 +339,15 @@ class RewardNode(Node):
         The device should already be connected, but we will flush the incoming bytes
         """
         if port is None:
-            port = self.get_parameter('device.port').value
+            port = self.get_parameter('port').value
         if baudrate is None:
-            baud = self.get_parameter('device.baudrate').value
+            baud = self.get_parameter('baudrate').value
         try:
             self.sock = serial.Serial(port, baud, timeout=1)
             self.dev_port = port
             self.dev_baud = baud
             #print(self.sock.readline())    
-            print("Successful connection to {} set up".format(self.dev_name))
+            print("Successful connection to {} on port {}, baudrate {} set up".format(self.dev_name, port, baud))
             self.send("q\nq\nq\n")
         except:
             print("Error connecting to '{}' on port {}, baudrate {}".format(self.dev_name, port, baud))
@@ -341,18 +357,31 @@ class RewardNode(Node):
         """
         return math.sqrt(sum(pow(element, 2) for element in vector))
 
-def main(args=None):
-    rclpy.init(args=args)
-    try:
-        node = RewardNode(verbose=True)
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.disconnect()
-        node.destroy_node()
-        rclpy.shutdown()
 
+def main(args=None):
+
+
+    # Initialize ROS. args=None
+    rclpy.init()
+    
+    # Run a node by passing control to ROS.
+    try:
+        
+        # Initialize the node.
+        node = RewardNode(verbose=True)
+        
+        # Spin the node.
+        try: rclpy.spin(node)
+        except KeyboardInterrupt: pass
+        finally: 
+            node.disconnect()
+            node.destroy_node()
+        
+    # Shut ROS down.
+    finally: rclpy.shutdown()
+    
+    # Return.
+    return
 
 if __name__ == '__main__':
     main()
