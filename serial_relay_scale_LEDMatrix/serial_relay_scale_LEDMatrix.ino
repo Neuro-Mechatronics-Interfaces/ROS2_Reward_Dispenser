@@ -86,6 +86,9 @@ int ZERO_VALUE = 8739450; // May never need this, but it's the value from the se
 float avg_size = 3.0; // amount of averages for each mass measurement (more measurements take longer)
 float y1 = 1.00; // calibrated mass to be added (ex: 1 = 1kg adjust to your system)
 
+// Double click feature to run the line for 60 seconds
+unsigned long FIRST_CLICK = 0.00;  // Time in milliseconds when manual dispense button was pressed the first time
+unsigned long SECOND_CLICK = 0.00; // Time in milliseconds when manual dispense button was pressed the first time
 
 // ============= Global state-tracking variables =========================
 volatile bool do_dispense;
@@ -114,6 +117,7 @@ void setup(void)
   n_repeat = 1;
   do_dispense = false;
   
+  checkWeight();
   _reset_load(); // Set the current load to zero, avoids having to press the reset button every time the task starts
 
 }
@@ -231,7 +235,7 @@ void setupLEDMatrix(void)
 {
     lc.begin();
     lc.setIntensity(0); // Set the brightness to a medium values ( [0-15] == [low-high] )
-    lc.print("Ready!");
+    lc.print("Ready!!");
     delay(500);
     lc.displayReset(); // and clear the display
 }
@@ -241,6 +245,7 @@ void setupLoadCell(void)
   // calibrateLoadCell()
   x0 = 7956700; //ONG_KG_CALIBRATED;  // value for a 1kG weight on the scale (7956700) // global parameters are causing an issue with reading...
   x1 = 8672900; //ZERO_CALIBRATED;  // value for nothing on the scale (8672900)
+  _reset_load();
 
 }
 
@@ -306,8 +311,7 @@ void checkWeight(void)
   }
 }
 
-void updateLEDMatrix(void)
-{
+void updateLEDMatrix(void){
   // Convert the mass number into mL of water  (1Kg = 1000mL)
   volume = mass * 1000;
   
@@ -327,8 +331,7 @@ void updateLEDMatrix(void)
   }
 }
 
-void _handle_blocking_dispense(void) 
-{
+void _handle_blocking_dispense(void) {
   //_HANDLE_BLOCKING_DISPENSE This handles running the blocking dispense routine, with notifications to Serial monitor.
   for (int i = 0; i < n_repeat; i++) {
     _blocking_dispense(); 
@@ -337,31 +340,42 @@ void _handle_blocking_dispense(void)
   do_dispense = false;
 }
 
-void _start_dispensing(void) 
-{
+void _start_dispensing(void) {
   //_START_DISPENSING Set the correct pin(s) to HIGH related to circuit configuration.
   digitalWrite(RELAY_PIN_OUT, HIGH);
   digitalWrite(REWARD_LED_PIN_OUT, HIGH);
 }
 
-void _stop_dispensing(void) 
-{
+void _stop_dispensing(void) {
   //_STOP_DISPENSING Set the correct pin(s) to LOW related to circuit configuration.
   digitalWrite(RELAY_PIN_OUT, LOW);
   digitalWrite(REWARD_LED_PIN_OUT, LOW);
 }
 
-void _handle_manual_dispense(void) 
-{
+void _handle_manual_dispense(void) {  
+  
+    
+  
   if (digitalRead(BUTTON_PIN_IN) == LOW) {
     _start_dispensing();
+    
+    //SECOND_CLICK = millis();
+    //if (FIRST_CLICK - SECOND_CLICK < 1) {
+    //  dispense_duration_ms = 10;
+    //  _blocking_dispense();
+    //}
+    //currentMillis = millis();
+    //previousMillis = currentMillis;
+    //while (currentMillis - previousMillis < dispense_duration_ms) { 
+    //Serial.println(SECOND_CLICK - FIRST_CLICK);
+    //FIRST_CLICK = SECOND_CLICK;
+    
   } else {
     _stop_dispensing();
   }
 }
 
-void _blocking_dispense(void) 
-{ 
+void _blocking_dispense(void) { 
   // Turn the correct pin on, wait, then turn it off
   
   _start_dispensing();
@@ -376,22 +390,19 @@ void _blocking_dispense(void)
   _stop_dispensing();
 }
 
-void _reset_load(void)
-{
+void _reset_load(void){
   //Serial.println("reset button pressed");
   // reset button pressed and new zero found
   offset = -mass;
 }
 
-void _handle_duration_request(double x) 
-{ 
+void _handle_duration_request(double x) { 
   // Handles requests led with 'd'
   dispense_duration_ms = max(x, MIN_RELAY_OPEN_TIME);
   do_dispense = true; 
 }
 
-void _handle_volume_request(double x) 
-{ 
+void _handle_volume_request(double x) { 
   // Handles requests led with 'v'
   x = x / 1000.0;
   dispense_duration_ms = max(x * 777.0 - 93.0, MIN_RELAY_OPEN_TIME); // Uses linear regression from empirical calibration.

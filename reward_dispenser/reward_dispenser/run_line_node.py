@@ -39,7 +39,8 @@ class Node(Node):
         self.dev_name = dev_name
         self.verbose = verbose
         self.flush_not_done = True
-        self.create_timer(0.1, self.timer_callback)
+        self.create_timer(1, self.timer_callback)
+        #self.create_timer(0.1, self.timer_callback)
         self.declare_parameter('dispense_time',40)
         self.declare_parameter('device.port', dev_port),
         self.declare_parameter('device.baudrate', baudrate),
@@ -51,16 +52,20 @@ class Node(Node):
         self.sock = self.init_client(port, baud, False)
 
         param = self.get_parameter('dispense_time').value
-        self.cont_dispense(True)
         print("Dispensing water for {} seconds".format(param))
+        self.cont_dispense(True)
         
     def timer_callback(self):
-        """ Callback function that executes from the timer, checks whether dispense suration has passed
+        """ Callback function that executes from the timer, checks whether dispense duration has passed
         """
         dispense_time = self.get_parameter('dispense_time').value
         if (time.time() - self.tick) > dispense_time and self.sock:
             print("Dispense done")
-            time.sleep(0.1)
+            time.sleep(0.5)
+            self.cont_dispense(False)
+            time.sleep(0.5)
+            self.cont_dispense(False)
+            time.sleep(0.5)
             self.cont_dispense(False)
             self.flush_not_done = False
         else:

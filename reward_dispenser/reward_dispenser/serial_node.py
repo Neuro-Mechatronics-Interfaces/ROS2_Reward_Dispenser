@@ -209,8 +209,9 @@ class RewardNode(Node):
         The state saved to the 'current_state' attribute is evaluated within a case structure
                 
         """
-        if keyboard.is_pressed("space"):
-            self.manual_dispense_cb(True)
+        # set key for manual dispense
+        #if keyboard.is_pressed("space"):
+        #    self.manual_dispense_cb(True)
         
         #dur_dispense = False     
         #print(self.current_state)   
